@@ -1,0 +1,106 @@
+{
+  "buttons": [
+    {
+      "id": "mode-place",
+      "label": "Place [1]",
+      "action": "setModePlace",
+      "isMode": true,
+      "mode": "place"
+    },
+    {
+      "id": "mode-move",
+      "label": "Move [2]",
+      "action": "setModeMove",
+      "isMode": true,
+      "mode": "move"
+    },
+    {
+      "id": "mode-wall",
+      "label": "Wall [3]",
+      "action": "setModeWall",
+      "isMode": true,
+      "mode": "wall"
+    },
+    {
+      "id": "mode-delete",
+      "label": "Delete [4]",
+      "action": "setModeDelete",
+      "isMode": true,
+      "mode": "delete"
+    },
+    {
+      "id": "repeat",
+      "label": "Repeat [R]",
+      "action": "repeat"
+    },
+    {
+      "id": "clear",
+      "label": "Clear All",
+      "action": "clearAll"
+    },
+    {
+      "id": "toggleGrid",
+      "label": "Toggle Grid [G]",
+      "action": "toggleGrid"
+    }
+  ],
+  "keybinds": {
+    "1": "setModePlace",
+    "2": "setModeMove",
+    "3": "setModeWall",
+    "4": "setModeDelete",
+    "r": "repeat",
+    "g": "toggleGrid",
+    "Escape": "escape"
+  },
+  "controls": [
+    {
+      "id": "grid-color",
+      "type": "color",
+      "label": "Grid Color",
+      "action": "setGridColor",
+      "default": "#2d2d44"
+    },
+    {
+      "id": "object-color",
+      "type": "color",
+      "label": "Object Color",
+      "action": "setObjectColor",
+      "default": "#8B4513"
+    },
+    {
+      "id": "object-shape",
+      "type": "select",
+      "label": "Shape",
+      "action": "setObjectShape",
+      "default": "box",
+      "options": [
+        { "value": "box", "label": "Box" },
+        { "value": "cylinder", "label": "Cylinder" },
+        { "value": "sphere", "label": "Sphere" }
+      ]
+    }
+  ],
+  "settings": {
+    "gridSize": 20,
+    "boxColor": "#8B4513"
+  },
+  "modes": {
+    "place": {
+      "label": "Place",
+      "highlightColor": "#00ff88"
+    },
+    "move": {
+      "label": "Move",
+      "highlightColor": "#ffaa00"
+    },
+    "wall": {
+      "label": "Wall",
+      "highlightColor": "#00aaff"
+    },
+    "delete": {
+      "label": "Delete",
+      "highlightColor": "#ff4444"
+    }
+  }
+}
