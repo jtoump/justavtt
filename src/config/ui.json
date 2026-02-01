@@ -15,23 +15,37 @@
       "mode": "move"
     },
     {
-      "id": "mode-wall",
-      "label": "Wall [3]",
-      "action": "setModeWall",
+      "id": "mode-measure",
+      "label": "Measure [3]",
+      "action": "setModeMeasure",
       "isMode": true,
-      "mode": "wall"
+      "mode": "measure"
+    },
+    {
+      "id": "mode-template",
+      "label": "Template [4]",
+      "action": "setModeTemplate",
+      "isMode": true,
+      "mode": "template"
     },
     {
       "id": "mode-delete",
-      "label": "Delete [4]",
+      "label": "Delete [5]",
       "action": "setModeDelete",
       "isMode": true,
       "mode": "delete"
     },
     {
-      "id": "repeat",
-      "label": "Repeat [R]",
-      "action": "repeat"
+      "id": "mode-wall",
+      "label": "Wall [6]",
+      "action": "setModeWall",
+      "isMode": true,
+      "mode": "wall"
+    },
+    {
+      "id": "toggleDice",
+      "label": "Dice 🎲 [D]",
+      "action": "toggleDice"
     },
     {
       "id": "clear",
@@ -47,43 +61,81 @@
   "keybinds": {
     "1": "setModePlace",
     "2": "setModeMove",
-    "3": "setModeWall",
-    "4": "setModeDelete",
+    "3": "setModeMeasure",
+    "4": "setModeTemplate",
+    "5": "setModeDelete",
+    "6": "setModeWall",
     "r": "repeat",
+    "d": "toggleDice",
     "g": "toggleGrid",
     "Escape": "escape"
   },
   "controls": [
     {
-      "id": "grid-color",
-      "type": "color",
-      "label": "Grid Color",
-      "action": "setGridColor",
-      "default": "#2d2d44"
+      "id": "object-shape",
+      "type": "select",
+      "label": "Shape",
+      "action": "setObjectShape",
+      "default": "model",
+      "options": [
+        { "value": "model", "label": "Model (Base)" },
+        { "value": "box", "label": "Box" },
+        { "value": "cylinder", "label": "Cylinder" },
+        { "value": "sphere", "label": "Sphere" }
+      ]
     },
     {
       "id": "object-color",
       "type": "color",
       "label": "Object Color",
       "action": "setObjectColor",
-      "default": "#8B4513"
+      "default": "#3366cc"
     },
     {
-      "id": "object-shape",
+      "id": "base-size",
       "type": "select",
-      "label": "Shape",
-      "action": "setObjectShape",
-      "default": "box",
+      "label": "Base Size",
+      "action": "setBaseSize",
+      "default": "32mm",
       "options": [
-        { "value": "box", "label": "Box" },
-        { "value": "cylinder", "label": "Cylinder" },
-        { "value": "sphere", "label": "Sphere" }
+        { "value": "25mm", "label": "25mm" },
+        { "value": "32mm", "label": "32mm" },
+        { "value": "40mm", "label": "40mm" },
+        { "value": "50mm", "label": "50mm" },
+        { "value": "60mm", "label": "60mm" },
+        { "value": "80mm", "label": "80mm (Bike)" },
+        { "value": "100mm", "label": "100mm (Monster)" },
+        { "value": "120mm", "label": "120mm (Vehicle)" }
       ]
+    },
+    {
+      "id": "template-type",
+      "type": "select",
+      "label": "Template",
+      "action": "setTemplateType",
+      "default": "small-blast",
+      "options": [
+        { "value": "small-blast", "label": "3\" Blast" },
+        { "value": "large-blast", "label": "5\" Blast" },
+        { "value": "apocalypse", "label": "10\" Apocalypse" },
+        { "value": "flame", "label": "Flamer" },
+        { "value": "cone-small", "label": "6\" Cone" },
+        { "value": "cone-large", "label": "12\" Cone" },
+        { "value": "aura-3", "label": "3\" Aura" },
+        { "value": "aura-6", "label": "6\" Aura" }
+      ]
+    },
+    {
+      "id": "grid-color",
+      "type": "color",
+      "label": "Table Color",
+      "action": "setGridColor",
+      "default": "#2d4428"
     }
   ],
   "settings": {
-    "gridSize": 20,
-    "boxColor": "#8B4513"
+    "gridSize": 48,
+    "boxColor": "#3366cc"
   },
   "modes": {
     "place": {
@@ -94,13 +146,21 @@
       "label": "Move",
       "highlightColor": "#ffaa00"
     },
-    "wall": {
-      "label": "Wall",
-      "highlightColor": "#00aaff"
+    "measure": {
+      "label": "Measure",
+      "highlightColor": "#ffff00"
+    },
+    "template": {
+      "label": "Template",
+      "highlightColor": "#ff6600"
     },
     "delete": {
       "label": "Delete",
       "highlightColor": "#ff4444"
+    },
+    "wall": {
+      "label": "Wall",
+      "highlightColor": "#00aaff"
     }
   }
 }

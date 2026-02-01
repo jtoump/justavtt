@@ -5,8 +5,11 @@ import { Raycaster } from './interaction/Raycaster.js';
 import { SnapHighlight } from './interaction/SnapHighlight.js';
 import { WallPreview } from './interaction/WallPreview.js';
 import { MeasurementLine } from './interaction/MeasurementLine.js';
+import { MeasuringTape } from './interaction/MeasuringTape.js';
+import { Templates } from './interaction/Templates.js';
 import { ObjectManager } from './objects/ObjectManager.js';
 import { UIManager } from './ui/UIManager.js';
+import { DiceRoller } from './ui/DiceRoller.js';
 import { MapState } from './state/MapState.js';
 import { SessionManager } from './multiplayer/SessionManager.js';
 
@@ -19,6 +22,8 @@ class App {
     this.moveStartPos = null;
     this.lastPlacedPositions = [];
     this.mapState = new MapState();
+    this.currentTemplateType = 'small-blast';
+    this.isMeasuring = false;
     this.init();
   }
 
@@ -51,7 +56,19 @@ class App {
     this.snapHighlight = new SnapHighlight(this.sceneManager.scene);
     this.wallPreview = new WallPreview(this.sceneManager.scene);
     this.measurementLine = new MeasurementLine(this.sceneManager.scene);
+    this.measuringTape = new MeasuringTape(this.sceneManager.scene);
+    this.templates = new Templates(this.sceneManager.scene);
     this.distanceDisplay = document.getElementById('distance-display');
+
+    // Create measure display for wargaming
+    this.measureDisplay = document.createElement('div');
+    this.measureDisplay.className = 'measure-display';
+    this.measureDisplay.style.display = 'none';
+    document.getElementById('app').appendChild(this.measureDisplay);
+
+    // Initialize dice roller
+    this.diceRoller = new DiceRoller(document.getElementById('app'));
+    this.diceRoller.hide(); // Hidden by default
 
     this.raycaster = new Raycaster(
       this.sceneManager.camera,
@@ -176,50 +193,56 @@ class App {
         this.updateRaycasterObjects();
         this.notifyStateChange();
       }
+    } else if (this.currentMode === 'measure') {
+      // Measuring tape mode - click to start/end measurement
+      if (!this.isMeasuring) {
+        // Start measuring
+        this.isMeasuring = true;
+        this.measuringTape.start(event.point);
+        this.measureDisplay.style.display = 'block';
+        this.measureDisplay.textContent = '0"';
+      } else {
+        // End measuring
+        this.isMeasuring = false;
+        this.measuringTape.end();
+        this.measureDisplay.style.display = 'none';
+      }
+    } else if (this.currentMode === 'template') {
+      // Template mode - click to place template
+      if (this.templates.activeTemplate) {
+        this.templates.placeTemplate();
+      } else {
+        this.templates.showTemplate(this.currentTemplateType, event.point);
+      }
     } else if (this.currentMode === 'wall') {
-      if (event.type === 'grid') {
-        const gridPos = this.grid.worldToGrid(event.point.x, event.point.z);
+      // Wall mode - click to start/place wall line
+      if (event.type === 'grid' || event.type === 'object') {
+        const gridPos = event.type === 'grid'
+          ? this.grid.worldToGrid(event.point.x, event.point.z)
+          : { x: event.object.userData.gridX, z: event.object.userData.gridZ };
+
         if (gridPos) {
           if (!this.wallStart) {
+            // First click - set wall start
             this.wallStart = gridPos;
-            this.snapHighlight.setColor(0x00aaff);
             const worldPos = this.grid.gridToWorld(gridPos.x, gridPos.z);
-            this.snapHighlight.show(worldPos.x, 0, worldPos.z);
+            const stackHeight = this.objectManager.getStackHeight(gridPos.x, gridPos.z);
+            this.snapHighlight.setColor(0x00aaff);
+            this.snapHighlight.show(worldPos.x, stackHeight, worldPos.z);
           } else {
+            // Second click - place wall
             const positions = this.wallPreview.getLinePositions(this.wallStart, gridPos);
+            this.lastPlacedPositions = [];
             for (const pos of positions) {
               this.objectManager.addBox(pos.x, pos.z);
+              this.lastPlacedPositions.push({ x: pos.x, z: pos.z });
             }
-            this.lastPlacedPositions = positions.map(p => ({ x: p.x, z: p.z }));
             this.updateRaycasterObjects();
             this.notifyStateChange();
             this.wallStart = null;
             this.wallPreview.hide();
             this.snapHighlight.hide();
           }
-        }
-      } else if (event.type === 'object') {
-        const gridX = event.object.userData.gridX;
-        const gridZ = event.object.userData.gridZ;
-        const gridPos = { x: gridX, z: gridZ };
-
-        if (!this.wallStart) {
-          this.wallStart = gridPos;
-          this.snapHighlight.setColor(0x00aaff);
-          const worldPos = this.grid.gridToWorld(gridPos.x, gridPos.z);
-          const stackHeight = this.objectManager.getStackHeight(gridPos.x, gridPos.z);
-          this.snapHighlight.show(worldPos.x, stackHeight, worldPos.z);
-        } else {
-          const positions = this.wallPreview.getLinePositions(this.wallStart, gridPos);
-          for (const pos of positions) {
-            this.objectManager.addBox(pos.x, pos.z);
-          }
-          this.lastPlacedPositions = positions.map(p => ({ x: p.x, z: p.z }));
-          this.updateRaycasterObjects();
-          this.notifyStateChange();
-          this.wallStart = null;
-          this.wallPreview.hide();
-          this.snapHighlight.hide();
         }
       }
     }
@@ -257,25 +280,46 @@ class App {
       } else {
         this.snapHighlight.hide();
       }
-    } else if (this.currentMode === 'wall' && this.wallStart) {
-      let endPos = null;
-
-      if (event.objectHit) {
-        endPos = {
-          x: event.objectHit.object.userData.gridX,
-          z: event.objectHit.object.userData.gridZ
-        };
-      } else if (event.gridHit) {
-        endPos = this.grid.worldToGrid(event.gridHit.point.x, event.gridHit.point.z);
+    } else if (this.currentMode === 'measure') {
+      // Update measuring tape on hover
+      if (this.isMeasuring && event.gridHit) {
+        const distance = this.measuringTape.update(event.gridHit.point);
+        if (distance !== null) {
+          const formatted = this.measuringTape.formatDistance(distance);
+          this.measureDisplay.textContent = formatted;
+        }
       }
-
-      if (endPos) {
-        const positions = this.wallPreview.getLinePositions(this.wallStart, endPos);
-        this.wallPreview.show(
-          positions,
-          this.grid,
-          (x, z) => this.objectManager.getStackHeight(x, z)
-        );
+    } else if (this.currentMode === 'template') {
+      // Update template position on hover
+      if (event.gridHit) {
+        if (this.templates.activeTemplate) {
+          this.templates.updateTemplatePosition(event.gridHit.point);
+        } else {
+          // Show preview template
+          this.templates.showTemplate(this.currentTemplateType, event.gridHit.point);
+        }
+      }
+    } else if (this.currentMode === 'wall') {
+      // Wall mode - show preview line from start to current position
+      if (this.wallStart && event.gridHit) {
+        const gridPos = this.grid.worldToGrid(event.gridHit.point.x, event.gridHit.point.z);
+        if (gridPos) {
+          const positions = this.wallPreview.getLinePositions(this.wallStart, gridPos);
+          this.wallPreview.show(
+            positions,
+            this.grid,
+            (x, z) => this.objectManager.getStackHeight(x, z)
+          );
+        }
+      } else if (!this.wallStart && event.gridHit) {
+        // Show highlight at hover position when no wall started
+        const gridPos = this.grid.worldToGrid(event.gridHit.point.x, event.gridHit.point.z);
+        if (gridPos) {
+          const worldPos = this.grid.gridToWorld(gridPos.x, gridPos.z);
+          const stackHeight = this.objectManager.getStackHeight(gridPos.x, gridPos.z);
+          this.snapHighlight.setColor(0x00aaff);
+          this.snapHighlight.show(worldPos.x, stackHeight, worldPos.z);
+        }
       }
     }
   }
@@ -375,13 +419,31 @@ class App {
     this.snapHighlight.hide();
     this.wallPreview.hide();
     this.measurementLine.hide();
+    this.measuringTape.hide();
+    this.templates.hideActiveTemplate();
     this.distanceDisplay.classList.remove('visible');
+    this.measureDisplay.style.display = 'none';
     this.wallStart = null;
     this.moveStartPos = null;
     this.currentSnapTarget = null;
+    this.isMeasuring = false;
   }
 
   handleEscape() {
+    // Cancel measuring
+    if (this.isMeasuring) {
+      this.isMeasuring = false;
+      this.measuringTape.hide();
+      this.measureDisplay.style.display = 'none';
+      return;
+    }
+
+    // Cancel template placement
+    if (this.templates.activeTemplate) {
+      this.templates.hideActiveTemplate();
+      return;
+    }
+
     if (this.wallStart) {
       this.wallStart = null;
       this.wallPreview.hide();
@@ -418,15 +480,20 @@ class App {
   }
 
   registerUIActions() {
+    // Mode actions
     this.uiManager.registerAction('setModePlace', () => this.setMode('place'));
     this.uiManager.registerAction('setModeMove', () => this.setMode('move'));
-    this.uiManager.registerAction('setModeWall', () => this.setMode('wall'));
+    this.uiManager.registerAction('setModeMeasure', () => this.setMode('measure'));
+    this.uiManager.registerAction('setModeTemplate', () => this.setMode('template'));
     this.uiManager.registerAction('setModeDelete', () => this.setMode('delete'));
+    this.uiManager.registerAction('setModeWall', () => this.setMode('wall'));
 
     this.uiManager.registerAction('escape', () => this.handleEscape());
+    this.uiManager.registerAction('repeat', () => this.handleRepeat());
 
     this.uiManager.registerAction('clearAll', () => {
       this.objectManager.clearAll();
+      this.templates.clearAllTemplates();
       this.clearModeState();
       this.updateRaycasterObjects();
       this.notifyStateChange();
@@ -436,8 +503,12 @@ class App {
       this.grid.toggleVisibility();
     });
 
-    this.uiManager.registerAction('repeat', () => this.handleRepeat());
+    // Dice roller toggle
+    this.uiManager.registerAction('toggleDice', () => {
+      this.diceRoller.toggle();
+    });
 
+    // Color and shape settings
     this.uiManager.registerAction('setGridColor', (color) => {
       const hex = parseInt(color.replace('#', ''), 16);
       this.grid.setGroundColor(hex);
@@ -448,6 +519,20 @@ class App {
       this.objectManager.setBoxColor(hex);
     });
 
+    // Wargaming-specific actions
+    this.uiManager.registerAction('setBaseSize', (size) => {
+      this.objectManager.setBaseSize(size);
+    });
+
+    this.uiManager.registerAction('setTemplateType', (type) => {
+      this.currentTemplateType = type;
+      // Update preview if in template mode
+      if (this.currentMode === 'template') {
+        this.templates.hideActiveTemplate();
+      }
+    });
+
+    // Shape selection
     this.uiManager.registerAction('setObjectShape', (shape) => {
       this.objectManager.setShape(shape);
     });

@@ -69,9 +69,46 @@ export class Raycaster {
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
   }
 
+  /**
+   * Find the root parent object that belongs to our objects array.
+   * This is needed because raycasting into Groups hits child meshes,
+   * but we need to return the parent Group with userData.
+   */
+  findParentObject(hitObject) {
+    // Check if the hit object itself is in our objects array
+    if (this.objects.includes(hitObject)) {
+      return hitObject;
+    }
+    // Traverse up to find a parent that's in our objects array
+    let current = hitObject.parent;
+    while (current) {
+      if (this.objects.includes(current)) {
+        return current;
+      }
+      current = current.parent;
+    }
+    return hitObject; // Fallback to original if not found
+  }
+
+  /**
+   * Check if an object belongs to (or is) the carried object
+   */
+  isPartOfCarriedObject(obj) {
+    if (!this.carriedObject) return false;
+    if (obj === this.carriedObject) return true;
+    // Check if obj is a descendant of carriedObject
+    let current = obj.parent;
+    while (current) {
+      if (current === this.carriedObject) return true;
+      current = current.parent;
+    }
+    return false;
+  }
+
   raycastObjects() {
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    return this.raycaster.intersectObjects(this.objects, false);
+    // Use true to traverse children (needed for THREE.Group objects)
+    return this.raycaster.intersectObjects(this.objects, true);
   }
 
   raycastGrid() {
@@ -88,14 +125,20 @@ export class Raycaster {
     if (this.isCarrying && this.carriedObject) {
       const gridHits = this.raycastGrid();
       const objectHits = this.raycastObjects().filter(
-        hit => hit.object !== this.carriedObject
+        hit => !this.isPartOfCarriedObject(hit.object)
       );
+
+      // Map hits to their parent objects
+      const mappedHit = objectHits.length > 0 ? {
+        ...objectHits[0],
+        object: this.findParentObject(objectHits[0].object)
+      } : null;
 
       if (this.onPlaceCallback) {
         this.onPlaceCallback({
           carriedObject: this.carriedObject,
           gridHit: gridHits.length > 0 ? gridHits[0] : null,
-          objectHit: objectHits.length > 0 ? objectHits[0] : null
+          objectHit: mappedHit
         });
       }
 
@@ -107,14 +150,15 @@ export class Raycaster {
     const objectHits = this.raycastObjects();
     if (objectHits.length > 0) {
       const hit = objectHits[0];
+      const parentObject = this.findParentObject(hit.object);
 
       if (this.selectEnabled) {
         this.isCarrying = true;
-        this.carriedObject = hit.object;
+        this.carriedObject = parentObject;
 
         if (this.onSelectCallback) {
           this.onSelectCallback({
-            object: hit.object,
+            object: parentObject,
             point: hit.point
           });
         }
@@ -122,7 +166,7 @@ export class Raycaster {
         if (this.onClickCallback) {
           this.onClickCallback({
             type: 'object',
-            object: hit.object,
+            object: parentObject,
             point: hit.point
           });
         }
@@ -147,23 +191,35 @@ export class Raycaster {
     const gridHits = this.raycastGrid();
     const objectHits = this.raycastObjects();
 
+    // Map hits to their parent objects for hover callback
+    const mappedHoverHit = objectHits.length > 0 ? {
+      ...objectHits[0],
+      object: this.findParentObject(objectHits[0].object)
+    } : null;
+
     if (this.onHoverCallback) {
       this.onHoverCallback({
         gridHit: gridHits.length > 0 ? gridHits[0] : null,
-        objectHit: objectHits.length > 0 ? objectHits[0] : null
+        objectHit: mappedHoverHit
       });
     }
 
     if (this.isCarrying && this.carriedObject) {
       const filteredObjectHits = objectHits.filter(
-        hit => hit.object !== this.carriedObject
+        hit => !this.isPartOfCarriedObject(hit.object)
       );
+
+      // Map filtered hits to their parent objects
+      const mappedMoveHit = filteredObjectHits.length > 0 ? {
+        ...filteredObjectHits[0],
+        object: this.findParentObject(filteredObjectHits[0].object)
+      } : null;
 
       if (this.onMoveCallback) {
         this.onMoveCallback({
           carriedObject: this.carriedObject,
           gridHit: gridHits.length > 0 ? gridHits[0] : null,
-          objectHit: filteredObjectHits.length > 0 ? filteredObjectHits[0] : null
+          objectHit: mappedMoveHit
         });
       }
     }
