@@ -6,6 +6,11 @@ export class Grid {
     this.cellSize = 1;
     this.group = new THREE.Group();
 
+    // Texture loader for ground textures
+    this.textureLoader = new THREE.TextureLoader();
+    this.currentTexture = null;
+    this.originalColor = 0x2d2d44;
+
     this.createGridHelper();
     this.createGroundPlane();
     this.createRaycastPlane();
@@ -83,5 +88,93 @@ export class Grid {
 
   setGroundColor(color) {
     this.groundPlane.material.color.setHex(color);
+    this.originalColor = color;
+  }
+
+  /**
+   * Set a texture for the ground plane
+   * @param {string} imageUrl - URL or data URL of the image
+   * @param {Object} options - Texture options
+   * @param {number} options.repeatX - Horizontal repeat count (default: size)
+   * @param {number} options.repeatY - Vertical repeat count (default: size)
+   */
+  setGroundTexture(imageUrl, options = {}) {
+    const repeatX = options.repeatX || this.size;
+    const repeatY = options.repeatY || this.size;
+
+    this.textureLoader.load(
+      imageUrl,
+      (texture) => {
+        // Configure texture for tiling
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(repeatX, repeatY);
+        texture.colorSpace = THREE.SRGBColorSpace;
+
+        // Dispose of previous texture
+        if (this.currentTexture) {
+          this.currentTexture.dispose();
+        }
+        this.currentTexture = texture;
+
+        // Apply texture to ground plane
+        this.groundPlane.material.map = texture;
+        this.groundPlane.material.color.setHex(0xffffff); // Reset color for texture
+        this.groundPlane.material.needsUpdate = true;
+
+        console.log('[Grid] Texture applied successfully');
+      },
+      undefined,
+      (error) => {
+        console.error('[Grid] Error loading texture:', error);
+      }
+    );
+  }
+
+  /**
+   * Set texture repeat values
+   * @param {number} repeatX - Horizontal repeat count
+   * @param {number} repeatY - Vertical repeat count
+   */
+  setTextureRepeat(repeatX, repeatY) {
+    if (this.currentTexture) {
+      this.currentTexture.repeat.set(repeatX, repeatY);
+    }
+  }
+
+  /**
+   * Clear the texture and revert to solid color
+   */
+  clearGroundTexture() {
+    if (this.currentTexture) {
+      this.currentTexture.dispose();
+      this.currentTexture = null;
+    }
+
+    this.groundPlane.material.map = null;
+    this.groundPlane.material.color.setHex(this.originalColor);
+    this.groundPlane.material.needsUpdate = true;
+
+    console.log('[Grid] Texture cleared');
+  }
+
+  /**
+   * Check if a texture is currently applied
+   * @returns {boolean}
+   */
+  hasTexture() {
+    return this.currentTexture !== null;
+  }
+
+  /**
+   * Get texture state for serialization
+   * @returns {Object|null}
+   */
+  getTextureState() {
+    if (!this.currentTexture) return null;
+    return {
+      repeatX: this.currentTexture.repeat.x,
+      repeatY: this.currentTexture.repeat.y
+    };
   }
 }

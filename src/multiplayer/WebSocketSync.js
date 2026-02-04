@@ -105,12 +105,14 @@ export class WebSocketSync {
 
       switch (message.type) {
         case 'state_update':
+          console.log('[Sync] Received state update from:', message.from, 'objects:', message.state?.objects?.length || 0);
           if (this.onStateReceived) {
             this.onStateReceived(message.state, message.from);
           }
           break;
 
         case 'full_state':
+          console.log('[Sync] Received full state, objects:', message.state?.objects?.length || 0);
           if (this.onStateReceived) {
             this.onStateReceived(message.state, null);
           }
@@ -253,11 +255,14 @@ export class WebSocketSync {
    */
   broadcastState(state) {
     if (this.sessionId) {
+      console.log('[Sync] Broadcasting state, objects:', state?.objects?.length || 0);
       this.send({
         type: 'state_update',
         sessionId: this.sessionId,
         state
       });
+    } else {
+      console.warn('[Sync] Cannot broadcast: not in a session');
     }
   }
 

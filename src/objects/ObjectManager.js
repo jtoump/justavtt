@@ -44,8 +44,15 @@ export class ObjectManager {
         16
       ),
       // Model on base (wargaming miniature)
-      model: null // Generated dynamically based on base size
+      model: null, // Generated dynamically based on base size
+      // Light source (generated dynamically with PointLight)
+      light: null
     };
+
+    // Light source settings
+    this.lightColor = 0xffffcc;
+    this.lightIntensity = 2;
+    this.lightDistance = 15;
 
     this.selectedObject = null;
     this.selectedObjects = []; // Multi-select support
@@ -117,6 +124,10 @@ export class ObjectManager {
       // Create wargaming model with base
       mesh = this.createModel(worldPos, currentHeight);
       objectHeight = mesh.userData.modelHeight || this.boxSize;
+    } else if (this.currentShape === 'light') {
+      // Create light source
+      mesh = this.createLight(worldPos, currentHeight);
+      objectHeight = mesh.userData.modelHeight || this.boxSize;
     } else {
       // Original shape creation
       const material = new THREE.MeshStandardMaterial({
@@ -174,6 +185,127 @@ export class ObjectManager {
     group.userData.isModel = true;
 
     return group;
+  }
+
+  createLight(worldPos, currentHeight) {
+    const group = new THREE.Group();
+    const sphereRadius = 0.4;
+
+    // Create glowing sphere for visual representation
+    const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 16);
+    const sphereMaterial = new THREE.MeshBasicMaterial({
+      color: this.lightColor,
+      transparent: true,
+      opacity: 0.9
+    });
+    const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    sphere.position.y = sphereRadius + 0.1;
+    sphere.userData.isLightSphere = true;
+    group.add(sphere);
+
+    // Create the actual point light
+    const light = new THREE.PointLight(
+      this.lightColor,
+      this.lightIntensity,
+      this.lightDistance
+    );
+    light.position.y = sphereRadius + 0.1;
+    light.castShadow = true;
+    light.shadow.mapSize.width = 512;
+    light.shadow.mapSize.height = 512;
+    light.userData.isTemplateLight = true;
+    group.add(light);
+
+    // Add a small ring on the ground to show position
+    const ringGeometry = new THREE.RingGeometry(sphereRadius * 0.6, sphereRadius * 0.8, 32);
+    const ringMaterial = new THREE.MeshBasicMaterial({
+      color: this.lightColor,
+      transparent: true,
+      opacity: 0.5,
+      side: THREE.DoubleSide,
+      depthTest: false
+    });
+    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.01;
+    group.add(ring);
+
+    group.position.set(worldPos.x, currentHeight, worldPos.z);
+    group.userData.modelHeight = sphereRadius * 2 + 0.1;
+    group.userData.isLight = true;
+    group.userData.lightRef = light;
+    group.userData.sphereRef = sphere;
+    group.userData.ringRef = ring;
+    group.userData.lightIntensity = this.lightIntensity;
+    group.userData.lightDistance = this.lightDistance;
+    group.userData.lightColor = this.lightColor;
+
+    return group;
+  }
+
+  /**
+   * Set light color for new lights
+   * @param {number} color - Hex color
+   */
+  setLightColor(color) {
+    this.lightColor = color;
+  }
+
+  /**
+   * Update the color of an existing light object
+   * @param {THREE.Group} lightObject - The light group
+   * @param {number} color - Hex color
+   */
+  updateLightObjectColor(lightObject, color) {
+    if (!lightObject?.userData?.isLight) return;
+
+    const { lightRef, sphereRef, ringRef } = lightObject.userData;
+    if (lightRef) lightRef.color.setHex(color);
+    if (sphereRef?.material) sphereRef.material.color.setHex(color);
+    if (ringRef?.material) ringRef.material.color.setHex(color);
+    lightObject.userData.lightColor = color;
+  }
+
+  /**
+   * Update the intensity of an existing light object
+   * @param {THREE.Group} lightObject - The light group
+   * @param {number} intensity - Light intensity
+   */
+  updateLightObjectIntensity(lightObject, intensity) {
+    if (!lightObject?.userData?.isLight) return;
+
+    const { lightRef } = lightObject.userData;
+    if (lightRef) lightRef.intensity = intensity;
+    lightObject.userData.lightIntensity = intensity;
+  }
+
+  /**
+   * Update the distance (range) of an existing light object
+   * @param {THREE.Group} lightObject - The light group
+   * @param {number} distance - Light distance
+   */
+  updateLightObjectDistance(lightObject, distance) {
+    if (!lightObject?.userData?.isLight) return;
+
+    const { lightRef } = lightObject.userData;
+    if (lightRef) lightRef.distance = distance;
+    lightObject.userData.lightDistance = distance;
+  }
+
+  /**
+   * Set default light intensity for new lights
+   * @param {number} intensity - Light intensity
+   */
+  setLightIntensity(intensity) {
+    this.lightIntensity = intensity;
+  }
+
+  /**
+   * Set default light distance for new lights
+   * @param {number} distance - Light distance
+   */
+  setLightDistance(distance) {
+    this.lightDistance = distance;
   }
 
   setBaseSize(size) {
@@ -253,38 +385,77 @@ export class ObjectManager {
    * Add a box with specific state (used for deserialization)
    * @param {number} gridX - Grid X position
    * @param {number} gridZ - Grid Z position
-   * @param {string} shape - Shape type ('box', 'cylinder', 'sphere')
+   * @param {string} shape - Shape type ('box', 'cylinder', 'sphere', 'model', 'light')
    * @param {number} color - Hex color value
-   * @returns {THREE.Mesh} The created mesh
+   * @param {string} baseSize - Base size for model shapes (default: '32mm')
+   * @param {Object} lightState - Optional light state { intensity, distance }
+   * @returns {THREE.Mesh|THREE.Group} The created object
    */
-  addBoxWithState(gridX, gridZ, shape, color) {
+  addBoxWithState(gridX, gridZ, shape, color, baseSize = '32mm', lightState = null) {
     const currentHeight = this.getStackHeight(gridX, gridZ);
     const worldPos = this.grid.gridToWorld(gridX, gridZ);
 
-    const material = new THREE.MeshStandardMaterial({
-      color: color,
-      roughness: 0.7,
-      metalness: 0.1
-    });
+    let mesh;
+    let objectHeight = this.boxSize;
 
-    const geometry = this.geometries[shape] || this.geometries.box;
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(
-      worldPos.x,
-      currentHeight + this.boxSize / 2,
-      worldPos.z
-    );
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
+    if (shape === 'model') {
+      // Create wargaming model with base (same as addBox does for models)
+      const savedBaseSize = this.currentBaseSize;
+      const savedColor = this.boxColor;
+      this.currentBaseSize = baseSize;
+      this.boxColor = color;
+
+      mesh = this.createModel(worldPos, currentHeight);
+      objectHeight = mesh.userData.modelHeight || this.boxSize;
+
+      this.currentBaseSize = savedBaseSize;
+      this.boxColor = savedColor;
+    } else if (shape === 'light') {
+      // Create light source with saved state
+      const savedColor = this.lightColor;
+      const savedIntensity = this.lightIntensity;
+      const savedDistance = this.lightDistance;
+
+      this.lightColor = color;
+      if (lightState) {
+        this.lightIntensity = lightState.intensity || savedIntensity;
+        this.lightDistance = lightState.distance || savedDistance;
+      }
+
+      mesh = this.createLight(worldPos, currentHeight);
+      objectHeight = mesh.userData.modelHeight || this.boxSize;
+
+      this.lightColor = savedColor;
+      this.lightIntensity = savedIntensity;
+      this.lightDistance = savedDistance;
+    } else {
+      // Original shape creation for box, cylinder, sphere
+      const material = new THREE.MeshStandardMaterial({
+        color: color,
+        roughness: 0.7,
+        metalness: 0.1
+      });
+
+      const geometry = this.geometries[shape] || this.geometries.box;
+      mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(
+        worldPos.x,
+        currentHeight + this.boxSize / 2,
+        worldPos.z
+      );
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+    }
 
     mesh.userData.gridX = gridX;
     mesh.userData.gridZ = gridZ;
     mesh.userData.stackLevel = currentHeight;
     mesh.userData.shape = shape;
+    mesh.userData.baseSize = baseSize;
 
     this.scene.add(mesh);
     this.objects.push(mesh);
-    this.setStackHeight(gridX, gridZ, currentHeight + this.boxSize);
+    this.setStackHeight(gridX, gridZ, currentHeight + objectHeight);
 
     return mesh;
   }

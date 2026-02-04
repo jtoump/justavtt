@@ -32,10 +32,84 @@ html, body {
   position: absolute;
   top: 16px;
   left: 16px;
+  z-index: 100;
+}
+
+/* Collapsible Panel */
+.ui-panel {
+  background: rgba(30, 30, 30, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+  min-width: 200px;
+  max-width: 280px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.ui-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(50, 50, 50, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: default;
+  user-select: none;
+}
+
+.ui-panel-title {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ui-collapse-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 6px;
+  opacity: 0.7;
+  line-height: 1;
+}
+
+.ui-collapse-btn:hover {
+  opacity: 1;
+}
+
+.ui-panel-content {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  z-index: 100;
+  padding: 12px;
+  max-height: calc(100vh - 120px);
+  max-height: calc(100dvh - 120px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.ui-panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ui-panel-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ui-panel-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.ui-panel-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.ui-panel.collapsed .ui-panel-content {
+  display: none;
 }
 
 .ui-button {
@@ -150,6 +224,55 @@ html, body {
 .ui-select:focus {
   outline: none;
   border-color: rgba(100, 150, 255, 0.8);
+}
+
+/* File Input Control */
+.ui-file-control {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.ui-file-control label {
+  flex: none;
+}
+
+.ui-file-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ui-file-input {
+  display: none;
+}
+
+.ui-file-browse {
+  padding: 6px 12px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.ui-file-name {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+  flex: 1;
+}
+
+.ui-file-clear {
+  padding: 4px 8px;
+  font-size: 11px;
+  background: rgba(180, 60, 60, 0.8);
+  flex-shrink: 0;
+}
+
+.ui-file-clear:hover {
+  background: rgba(200, 80, 80, 0.9);
 }
 
 /* Session Panel Styles */
@@ -276,11 +399,26 @@ html, body {
     top: 8px;
     left: 8px;
     right: 8px;
-    max-height: calc(100vh - 16px - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0));
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
     padding-top: env(safe-area-inset-top, 0);
+  }
+
+  .ui-panel {
+    max-width: none;
+    width: 100%;
+  }
+
+  .ui-panel-content {
+    max-height: calc(60vh - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0));
+    padding: 10px;
+    gap: 6px;
+  }
+
+  .ui-panel-header {
+    padding: 12px;
+  }
+
+  .ui-panel-title {
+    font-size: 15px;
   }
 
   /* Larger touch targets (minimum 44px for iOS) */
@@ -371,7 +509,16 @@ html, body {
     top: 4px;
     left: 4px;
     right: 4px;
-    gap: 6px;
+  }
+
+  .ui-panel-content {
+    padding: 8px;
+    gap: 4px;
+    max-height: calc(50vh - env(safe-area-inset-top, 0));
+  }
+
+  .ui-panel-header {
+    padding: 8px 10px;
   }
 
   .ui-button {
@@ -400,11 +547,20 @@ html, body {
   #ui-container {
     top: 8px;
     left: 8px;
-    bottom: 8px;
+    bottom: auto;
     right: auto;
-    max-height: calc(100vh - 16px);
-    width: 200px;
     padding-left: env(safe-area-inset-left, 0);
+  }
+
+  .ui-panel {
+    min-width: 180px;
+    max-width: 220px;
+  }
+
+  .ui-panel-content {
+    max-height: calc(100vh - 80px - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0));
+    padding: 8px;
+    gap: 4px;
   }
 
   .ui-button {
@@ -821,5 +977,1126 @@ html, body {
   .measure-display {
     font-size: 24px;
     padding: 12px 20px;
+  }
+}
+
+/* ============================================
+   Item Panel Styles
+   ============================================ */
+
+.item-panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 300px;
+  background: rgba(30, 30, 30, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  z-index: 150;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  transform: translateX(120%);
+  transition: transform 0.3s ease;
+}
+
+.item-panel.panel-visible {
+  transform: translateX(0);
+}
+
+.item-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: rgba(50, 50, 50, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px 8px 0 0;
+}
+
+.item-panel-title {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.item-panel-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.item-panel-close:hover {
+  color: #fff;
+}
+
+.item-panel-content {
+  padding: 14px;
+  max-height: calc(80vh - 60px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.item-panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.item-panel-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.item-panel-placeholder {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 20px;
+}
+
+.placeholder-hint {
+  font-size: 12px;
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.item-panel-error {
+  text-align: center;
+  color: #ff6666;
+  padding: 20px;
+}
+
+.error-hint {
+  font-size: 12px;
+  margin-top: 8px;
+  color: rgba(255, 100, 100, 0.7);
+}
+
+/* Item Display */
+.item-display {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.item-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.item-type-line {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.item-type {
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: capitalize;
+}
+
+.item-rarity {
+  text-transform: capitalize;
+  font-weight: 500;
+}
+
+.item-description {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.item-properties {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.item-property {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.property-key {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.property-value {
+  color: #fff;
+}
+
+.item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.item-tag {
+  background: rgba(100, 100, 100, 0.4);
+  color: rgba(255, 255, 255, 0.8);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+/* Rarity Colors */
+.rarity-common {
+  color: #aaaaaa;
+}
+
+.rarity-uncommon {
+  color: #44cc44;
+}
+
+.rarity-rare {
+  color: #4488ff;
+}
+
+.rarity-very-rare,
+.rarity-veryrare {
+  color: #aa44ff;
+}
+
+.rarity-legendary {
+  color: #ffaa00;
+}
+
+.rarity-artifact {
+  color: #ff4444;
+}
+
+/* Deck Display */
+.deck-display {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.deck-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.deck-description {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.deck-info {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.deck-mode,
+.deck-replacement {
+  background: rgba(80, 80, 80, 0.5);
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.deck-status {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.deck-exhausted {
+  color: #ff6666;
+  margin-left: 8px;
+}
+
+.deck-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.deck-draw-btn,
+.deck-reset-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.deck-draw-btn {
+  background: rgba(80, 120, 200, 0.9);
+  color: #fff;
+}
+
+.deck-draw-btn:hover:not(:disabled) {
+  background: rgba(100, 140, 220, 0.95);
+}
+
+.deck-draw-btn:disabled {
+  background: rgba(60, 60, 60, 0.9);
+  color: rgba(255, 255, 255, 0.4);
+  cursor: not-allowed;
+}
+
+.deck-reset-btn {
+  background: rgba(60, 60, 60, 0.9);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.deck-reset-btn:hover {
+  background: rgba(80, 80, 80, 0.9);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Drawn Item Display */
+.deck-drawn-item {
+  min-height: 40px;
+}
+
+.drawn-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 200, 50, 0.4);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.drawn-card.empty {
+  border-color: rgba(255, 100, 100, 0.4);
+  text-align: center;
+}
+
+.drawn-label {
+  font-size: 11px;
+  color: rgba(255, 200, 50, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.drawn-item-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.drawn-item-type {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: capitalize;
+  margin-top: 2px;
+}
+
+.drawn-item-description {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.draw-animate {
+  animation: drawPulse 0.3s ease-out;
+}
+
+@keyframes drawPulse {
+  0% { transform: scale(1.03); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Link Selector */
+.link-selector {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.link-selector-label {
+  display: block;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.link-selector-dropdown {
+  width: 100%;
+  padding: 8px 10px;
+  background: rgba(40, 40, 40, 0.9);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.link-selector-dropdown:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.link-selector-dropdown:focus {
+  outline: none;
+  border-color: rgba(100, 150, 255, 0.6);
+}
+
+.link-selector-dropdown option {
+  background: #2a2a2a;
+  color: #fff;
+}
+
+.link-selector-dropdown optgroup {
+  background: #1a1a1a;
+  color: rgba(255, 255, 255, 0.7);
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* Mobile adjustments for Item Panel */
+@media screen and (max-width: 768px) {
+  .item-panel {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    max-height: 60vh;
+    border-radius: 12px 12px 0 0;
+    transform: translateY(100%);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .item-panel.panel-visible {
+    transform: translateY(0);
+  }
+
+  .item-panel-content {
+    max-height: calc(60vh - 60px - env(safe-area-inset-bottom, 0));
+  }
+
+  .deck-draw-btn,
+  .deck-reset-btn {
+    min-height: 44px;
+    font-size: 14px;
+  }
+}
+
+/* ============================================
+   Inventory Panel (Bottom Drawer)
+   ============================================ */
+
+.inventory-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(25, 25, 25, 0.98);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px 16px 0 0;
+  z-index: 200;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  max-height: 50vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.5);
+}
+
+.inventory-panel.drawer-open {
+  transform: translateY(0);
+}
+
+.inventory-handle {
+  display: flex;
+  justify-content: center;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.inventory-handle-bar {
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+}
+
+.inventory-handle:hover .inventory-handle-bar {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.inventory-header {
+  display: flex;
+  align-items: center;
+  padding: 0 16px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.inventory-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.inventory-count {
+  margin-left: 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.inventory-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.inventory-close:hover {
+  color: #fff;
+}
+
+.inventory-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0));
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.inventory-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.inventory-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.inventory-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inventory-item {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  background: rgba(50, 50, 50, 0.6);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.inventory-item:hover {
+  background: rgba(60, 60, 60, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.inventory-item.expanded {
+  background: rgba(60, 60, 60, 0.9);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.inventory-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.inventory-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.inventory-item-name {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inventory-item-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.inventory-item-type {
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: capitalize;
+}
+
+.inventory-item-source {
+  color: rgba(255, 200, 100, 0.7);
+  padding: 1px 6px;
+  background: rgba(255, 200, 100, 0.15);
+  border-radius: 4px;
+}
+
+.inventory-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.inventory-item-expand-icon {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 10px;
+  transition: transform 0.2s;
+  padding: 4px;
+}
+
+.inventory-item.expanded .inventory-item-expand-icon {
+  transform: rotate(180deg);
+}
+
+.inventory-item-remove {
+  background: none;
+  border: none;
+  color: rgba(255, 100, 100, 0.6);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.inventory-item-remove:hover {
+  background: rgba(255, 100, 100, 0.2);
+  color: rgba(255, 100, 100, 1);
+}
+
+/* Expandable Details Section */
+.inventory-item-details {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  padding: 0 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid transparent;
+}
+
+.inventory-item.expanded .inventory-item-details {
+  max-height: 200px;
+  padding: 12px;
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.inventory-item-rarity {
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.inventory-item-rarity .detail-label {
+  color: rgba(255, 255, 255, 0.5);
+  margin-right: 6px;
+}
+
+.inventory-item-description {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.inventory-item-added {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.inventory-item-added .detail-label {
+  color: rgba(255, 255, 255, 0.5);
+  margin-right: 6px;
+}
+
+.inventory-empty {
+  text-align: center;
+  padding: 30px 20px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.inventory-empty p {
+  margin: 0;
+}
+
+.inventory-empty-hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 8px !important;
+}
+
+/* Add to Stash Button */
+.add-to-stash-btn {
+  width: 100%;
+  padding: 10px 16px;
+  margin-top: 12px;
+  background: rgba(100, 180, 100, 0.8);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-to-stash-btn:hover:not(:disabled) {
+  background: rgba(120, 200, 120, 0.9);
+}
+
+.add-to-stash-btn:disabled {
+  background: rgba(60, 60, 60, 0.9);
+  color: rgba(255, 255, 255, 0.4);
+  cursor: not-allowed;
+}
+
+.add-to-stash-btn.stash-added {
+  background: rgba(100, 200, 100, 0.6);
+}
+
+.drawn-stash-btn {
+  margin-top: 10px;
+}
+
+/* Inventory Badge */
+.inventory-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #e74c3c;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Button with badge needs relative positioning */
+#toggleInventory {
+  position: relative;
+}
+
+/* Mobile adjustments for Inventory Panel */
+@media screen and (max-width: 768px) {
+  .inventory-panel {
+    max-height: 60vh;
+  }
+
+  .inventory-item {
+    padding: 12px;
+  }
+
+  .inventory-item-name {
+    font-size: 15px;
+  }
+
+  .inventory-item-remove {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .add-to-stash-btn {
+    min-height: 44px;
+    font-size: 14px;
+  }
+}
+
+/* ============================================
+   Creature Panel & Stat Block Styles
+   ============================================ */
+
+.creature-panel {
+  position: fixed;
+  right: 20px;
+  top: 80px;
+  width: 320px;
+  max-height: 80vh;
+  background: rgba(30, 30, 30, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+  display: none;
+  z-index: 150;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.creature-panel.panel-visible {
+  display: block;
+}
+
+.creature-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: rgba(50, 50, 50, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.creature-panel-title {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.creature-panel-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.creature-panel-close:hover {
+  color: #fff;
+}
+
+.creature-panel-content {
+  padding: 0;
+  max-height: calc(80vh - 50px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.creature-panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.creature-panel-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.creature-panel-placeholder {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 24px 16px;
+}
+
+.creature-panel-error {
+  text-align: center;
+  color: #ff6666;
+  padding: 24px 16px;
+}
+
+/* Stat Block Styling */
+.stat-block {
+  padding: 14px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+}
+
+.creature-name {
+  font-size: 20px;
+  font-weight: bold;
+  color: #c41e3a;
+  margin-bottom: 2px;
+}
+
+.creature-type {
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.stat-block-divider {
+  border: none;
+  border-bottom: 2px solid #c41e3a;
+  margin: 10px 0;
+  opacity: 0.7;
+}
+
+.stat-line {
+  margin: 4px 0;
+  font-size: 13px;
+}
+
+.stat-line strong {
+  color: #fff;
+}
+
+/* Ability Scores Table */
+.ability-scores {
+  margin: 8px 0;
+}
+
+.ability-table {
+  width: 100%;
+  text-align: center;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.ability-table th {
+  color: #c41e3a;
+  font-weight: bold;
+  padding: 4px 2px;
+  font-size: 11px;
+}
+
+.ability-table td {
+  color: rgba(255, 255, 255, 0.9);
+  padding: 4px 2px;
+  font-size: 12px;
+}
+
+.ability-mod {
+  cursor: pointer;
+  color: #64b4ff;
+  transition: all 0.2s;
+}
+
+.ability-mod:hover {
+  text-decoration: underline;
+  color: #88ccff;
+}
+
+/* Traits and Actions */
+.trait,
+.action {
+  margin: 10px 0;
+  line-height: 1.5;
+}
+
+.trait-name,
+.action-name {
+  color: #fff;
+}
+
+.trait-desc,
+.action-desc {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.actions-header {
+  font-size: 16px;
+  font-weight: bold;
+  color: #c41e3a;
+  border-bottom: 1px solid #c41e3a;
+  margin: 14px 0 10px;
+  padding-bottom: 4px;
+}
+
+/* Dice Notation Styling */
+.dice-notation {
+  display: inline;
+  cursor: pointer;
+  padding: 1px 5px;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+  font-weight: 500;
+}
+
+.dice-notation.damage {
+  background: rgba(255, 100, 100, 0.2);
+  color: #ff6666;
+  border: 1px solid rgba(255, 100, 100, 0.3);
+}
+
+.dice-notation.damage:hover {
+  background: rgba(255, 100, 100, 0.35);
+  border-color: rgba(255, 100, 100, 0.5);
+}
+
+.dice-notation.attack {
+  background: rgba(100, 180, 255, 0.2);
+  color: #64b4ff;
+  border: 1px solid rgba(100, 180, 255, 0.3);
+}
+
+.dice-notation.attack:hover {
+  background: rgba(100, 180, 255, 0.35);
+  border-color: rgba(100, 180, 255, 0.5);
+}
+
+.dice-notation.dice {
+  background: rgba(200, 200, 100, 0.2);
+  color: #cccc66;
+  border: 1px solid rgba(200, 200, 100, 0.3);
+}
+
+.dice-notation.dice:hover {
+  background: rgba(200, 200, 100, 0.35);
+  border-color: rgba(200, 200, 100, 0.5);
+}
+
+.dice-notation.dc {
+  background: rgba(255, 200, 100, 0.2);
+  color: #ffc864;
+  border: 1px solid rgba(255, 200, 100, 0.3);
+  cursor: default;
+}
+
+.dice-notation.save {
+  background: rgba(255, 180, 100, 0.2);
+  color: #ffb464;
+  border: 1px solid rgba(255, 180, 100, 0.3);
+  cursor: default;
+}
+
+.dice-notation.condition {
+  background: rgba(200, 100, 255, 0.2);
+  color: #c864ff;
+  border: 1px solid rgba(200, 100, 255, 0.3);
+  cursor: default;
+}
+
+.dice-notation.spell {
+  background: rgba(100, 255, 200, 0.2);
+  color: #64ffc8;
+  font-style: italic;
+  border: 1px solid rgba(100, 255, 200, 0.3);
+  cursor: default;
+}
+
+/* Clickable dice notation hover effects */
+.dice-notation[data-dice]:hover {
+  filter: brightness(1.15);
+  transform: scale(1.03);
+}
+
+.dice-notation.rolled {
+  animation: dice-roll-flash 0.3s ease;
+}
+
+@keyframes dice-roll-flash {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); background: rgba(255, 255, 255, 0.4); }
+  100% { transform: scale(1); }
+}
+
+/* ============================================
+   Draggable Panel Styles
+   ============================================ */
+
+.draggable-panel {
+  cursor: default;
+}
+
+.draggable-panel .creature-panel-header,
+.draggable-panel .item-panel-header {
+  cursor: grab;
+  user-select: none;
+}
+
+.draggable-panel.dragging .creature-panel-header,
+.draggable-panel.dragging .item-panel-header {
+  cursor: grabbing;
+}
+
+.draggable-panel.dragging {
+  opacity: 0.95;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+/* Panel Header Actions Container */
+.panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Lock Button */
+.panel-lock-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.panel-lock-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.panel-lock-btn.locked {
+  color: #64b4ff;
+  background: rgba(100, 180, 255, 0.2);
+}
+
+.panel-lock-btn.locked:hover {
+  background: rgba(100, 180, 255, 0.3);
+}
+
+/* Locked panel indicator */
+.draggable-panel.panel-locked {
+  border-color: rgba(100, 180, 255, 0.4);
+  box-shadow: 0 0 12px rgba(100, 180, 255, 0.2);
+}
+
+/* Mobile adjustments for Creature Panel */
+@media screen and (max-width: 768px) {
+  .creature-panel {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    max-height: 70vh;
+    border-radius: 16px 16px 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .creature-panel-content {
+    max-height: calc(70vh - 50px - env(safe-area-inset-bottom, 0));
+  }
+
+  .stat-block {
+    font-size: 14px;
+    padding: 16px;
+  }
+
+  .creature-name {
+    font-size: 22px;
+  }
+
+  .ability-table {
+    font-size: 13px;
+  }
+
+  .ability-table th {
+    font-size: 12px;
+  }
+
+  .dice-notation {
+    padding: 3px 8px;
+    font-size: 14px;
   }
 }

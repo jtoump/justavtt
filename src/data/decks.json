@@ -1,0 +1,34 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "description": "Deck definitions for random draws"
+  },
+  "decks": [
+    {
+      "id": "treasure-common",
+      "name": "Common Treasure",
+      "description": "A collection of common adventuring supplies and minor valuables.",
+      "drawMode": "random",
+      "replacement": true,
+      "items": ["healing-potion", "torch", "rope-50ft"],
+      "weights": [3, 5, 2]
+    },
+    {
+      "id": "treasure-rare",
+      "name": "Rare Treasure",
+      "description": "Valuable magical items found in dangerous dungeons.",
+      "drawMode": "random",
+      "replacement": false,
+      "items": ["longsword-1", "ring-protection", "healing-potion"],
+      "weights": [2, 1, 3]
+    },
+    {
+      "id": "starter-gear",
+      "name": "Starter Gear",
+      "description": "Basic equipment for new adventurers. Items drawn in sequence.",
+      "drawMode": "sequential",
+      "replacement": false,
+      "items": ["torch", "rope-50ft", "healing-potion"]
+    }
+  ]
+}

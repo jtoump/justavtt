@@ -19,7 +19,9 @@ export class Templates {
       'cone-large': { type: 'cone', length: 12, angle: 45, color: 0x0066ff, label: '12" Cone' },
       'line': { type: 'line', length: 12, width: 0.5, color: 0xffff00, label: '12" Line' },
       'aura-3': { type: 'ring', innerRadius: 0, outerRadius: 3, color: 0x00ff88, label: '3" Aura' },
-      'aura-6': { type: 'ring', innerRadius: 0, outerRadius: 6, color: 0x00ff44, label: '6" Aura' }
+      'aura-6': { type: 'ring', innerRadius: 0, outerRadius: 6, color: 0x00ff44, label: '6" Aura' },
+      'rectangle-card': { type: 'rectangle', width: 2.5, height: 3.5, color: 0x8844aa, label: 'Card', clickable: true },
+      'rectangle-token': { type: 'rectangle', width: 2, height: 2, color: 0x4488aa, label: 'Token', clickable: true }
     };
   }
 
@@ -45,12 +47,16 @@ export class Templates {
       case 'ring':
         mesh = this.createRingTemplate(config);
         break;
+      case 'rectangle':
+        mesh = this.createRectangleTemplate(config);
+        break;
       default:
         return null;
     }
 
     mesh.userData.templateType = typeName;
     mesh.userData.templateConfig = config;
+    mesh.userData.clickable = config.clickable || false;
     mesh.renderOrder = 100;
 
     return mesh;
@@ -237,6 +243,50 @@ export class Templates {
     return group;
   }
 
+  createRectangleTemplate(config) {
+    const width = config.width;
+    const height = config.height;
+
+    // Main rectangle fill
+    const geometry = new THREE.PlaneGeometry(width, height);
+    const material = new THREE.MeshBasicMaterial({
+      color: config.color,
+      transparent: true,
+      opacity: 0.4,
+      side: THREE.DoubleSide,
+      depthTest: false
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.y = 0.01;
+
+    // Create border using EdgesGeometry
+    const borderShape = new THREE.Shape();
+    borderShape.moveTo(-width / 2, -height / 2);
+    borderShape.lineTo(width / 2, -height / 2);
+    borderShape.lineTo(width / 2, height / 2);
+    borderShape.lineTo(-width / 2, height / 2);
+    borderShape.lineTo(-width / 2, -height / 2);
+
+    const borderGeometry = new THREE.ShapeGeometry(borderShape);
+    const edgesGeometry = new THREE.EdgesGeometry(borderGeometry);
+    const borderMaterial = new THREE.LineBasicMaterial({
+      color: config.color,
+      transparent: true,
+      opacity: 0.9
+    });
+    const border = new THREE.LineSegments(edgesGeometry, borderMaterial);
+    border.rotation.x = -Math.PI / 2;
+    border.position.y = 0.02;
+
+    const group = new THREE.Group();
+    group.add(mesh);
+    group.add(border);
+
+    return group;
+  }
+
   showTemplate(typeName, position) {
     this.hideActiveTemplate();
 
@@ -326,6 +376,47 @@ export class Templates {
       const point = obj.position;
       return this.isPointInTemplate(point, template);
     });
+  }
+
+  /**
+   * Get all clickable templates that have been placed
+   * @returns {Array} Array of clickable template objects
+   */
+  getClickableTemplates() {
+    return this.placedTemplates.filter(t => t.userData.clickable);
+  }
+
+  /**
+   * Link a template to data (item or deck)
+   * @param {THREE.Object3D} template - Template to link
+   * @param {Object} linkData - Data to link { type: 'item'|'deck', id: string }
+   */
+  linkTemplateToData(template, linkData) {
+    if (template && linkData) {
+      template.userData.linkedData = {
+        type: linkData.type,
+        id: linkData.id
+      };
+      console.log(`[Templates] Linked template to ${linkData.type}: ${linkData.id}`);
+    }
+  }
+
+  /**
+   * Get the linked data for a template
+   * @param {THREE.Object3D} template - Template to get data from
+   * @returns {Object|null} Linked data or null
+   */
+  getLinkedData(template) {
+    return template?.userData?.linkedData || null;
+  }
+
+  /**
+   * Check if a template is clickable
+   * @param {THREE.Object3D} template - Template to check
+   * @returns {boolean}
+   */
+  isClickableTemplate(template) {
+    return template?.userData?.clickable === true;
   }
 
   dispose() {

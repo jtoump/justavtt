@@ -29,6 +29,43 @@ export class UIManager {
     this.buttons.clear();
     this.modeButtons.clear();
 
+    // Create collapsible panel structure
+    const panel = document.createElement('div');
+    panel.className = 'ui-panel';
+
+    // Panel header with collapse button
+    const header = document.createElement('div');
+    header.className = 'ui-panel-header';
+
+    const title = document.createElement('span');
+    title.className = 'ui-panel-title';
+    title.textContent = 'Controls';
+
+    const collapseBtn = document.createElement('button');
+    collapseBtn.className = 'ui-collapse-btn';
+    collapseBtn.textContent = '−';
+    collapseBtn.title = 'Collapse/Expand';
+
+    header.appendChild(title);
+    header.appendChild(collapseBtn);
+
+    // Panel content (scrollable)
+    const content = document.createElement('div');
+    content.className = 'ui-panel-content';
+    this.panelContent = content;
+
+    // Toggle collapse on header click
+    collapseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      panel.classList.toggle('collapsed');
+      collapseBtn.textContent = panel.classList.contains('collapsed') ? '+' : '−';
+    });
+
+    panel.appendChild(header);
+    panel.appendChild(content);
+    this.container.appendChild(panel);
+
+    // Add buttons to content
     if (this.config.buttons) {
       let addedSeparator = false;
 
@@ -36,12 +73,12 @@ export class UIManager {
         if (!buttonConfig.isMode && !addedSeparator) {
           const separator = document.createElement('div');
           separator.className = 'ui-separator';
-          this.container.appendChild(separator);
+          content.appendChild(separator);
           addedSeparator = true;
         }
 
         const button = this.createButton(buttonConfig);
-        this.container.appendChild(button);
+        content.appendChild(button);
         this.buttons.set(buttonConfig.id, button);
 
         if (buttonConfig.isMode) {
@@ -50,18 +87,22 @@ export class UIManager {
       }
     }
 
+    // Add controls to content
     if (this.config.controls) {
       const separator = document.createElement('div');
       separator.className = 'ui-separator';
-      this.container.appendChild(separator);
+      content.appendChild(separator);
 
       for (const control of this.config.controls) {
         if (control.type === 'color') {
           const colorControl = this.createColorInput(control);
-          this.container.appendChild(colorControl);
+          content.appendChild(colorControl);
         } else if (control.type === 'select') {
           const selectControl = this.createSelect(control);
-          this.container.appendChild(selectControl);
+          content.appendChild(selectControl);
+        } else if (control.type === 'file') {
+          const fileControl = this.createFileInput(control);
+          content.appendChild(fileControl);
         }
       }
     }
@@ -145,6 +186,81 @@ export class UIManager {
 
     wrapper.appendChild(label);
     wrapper.appendChild(select);
+    return wrapper;
+  }
+
+  createFileInput(config) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'ui-control ui-file-control';
+
+    const label = document.createElement('label');
+    label.textContent = config.label;
+    label.htmlFor = config.id;
+
+    const inputWrapper = document.createElement('div');
+    inputWrapper.className = 'ui-file-input-wrapper';
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.id = config.id;
+    input.accept = config.accept || 'image/*';
+    input.className = 'ui-file-input';
+
+    const browseBtn = document.createElement('button');
+    browseBtn.type = 'button';
+    browseBtn.className = 'ui-button ui-file-browse';
+    browseBtn.textContent = 'Browse...';
+
+    const fileName = document.createElement('span');
+    fileName.className = 'ui-file-name';
+    fileName.textContent = 'No file selected';
+
+    // Clear button (shown when file is selected)
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'ui-button ui-file-clear';
+    clearBtn.textContent = 'Clear';
+    clearBtn.style.display = 'none';
+
+    browseBtn.addEventListener('click', () => input.click());
+
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (file) {
+        fileName.textContent = file.name;
+        clearBtn.style.display = 'inline-block';
+
+        // Read file as data URL and pass to action
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const action = this.actions[config.action];
+          if (action) {
+            action(e.target.result, file);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      fileName.textContent = 'No file selected';
+      clearBtn.style.display = 'none';
+
+      // Call clear action if defined
+      const clearAction = this.actions[config.clearAction];
+      if (clearAction) {
+        clearAction();
+      }
+    });
+
+    inputWrapper.appendChild(input);
+    inputWrapper.appendChild(browseBtn);
+    inputWrapper.appendChild(fileName);
+    inputWrapper.appendChild(clearBtn);
+
+    wrapper.appendChild(label);
+    wrapper.appendChild(inputWrapper);
     return wrapper;
   }
 
@@ -311,17 +427,20 @@ export class UIManager {
   renderSessionPanel() {
     this.sessionPanel = this.createSessionPanel();
 
+    // Use panel content if available, otherwise fall back to container
+    const target = this.panelContent || this.container;
+
     // Add separator before session panel
     const separator = document.createElement('div');
     separator.className = 'ui-separator';
-    this.container.appendChild(separator);
+    target.appendChild(separator);
 
     // Add label
     const label = document.createElement('div');
     label.className = 'ui-section-label';
     label.textContent = 'Multiplayer';
-    this.container.appendChild(label);
+    target.appendChild(label);
 
-    this.container.appendChild(this.sessionPanel);
+    target.appendChild(this.sessionPanel);
   }
 }

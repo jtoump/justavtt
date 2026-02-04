@@ -1,6 +1,13 @@
 {
   "buttons": [
     {
+      "id": "mode-select",
+      "label": "Select [0]",
+      "action": "setModeSelect",
+      "isMode": true,
+      "mode": "select"
+    },
+    {
       "id": "mode-place",
       "label": "Place [1]",
       "action": "setModePlace",
@@ -48,6 +55,11 @@
       "action": "toggleDice"
     },
     {
+      "id": "toggleInventory",
+      "label": "Inventory [I]",
+      "action": "toggleInventory"
+    },
+    {
       "id": "clear",
       "label": "Clear All",
       "action": "clearAll"
@@ -59,6 +71,7 @@
     }
   ],
   "keybinds": {
+    "0": "setModeSelect",
     "1": "setModePlace",
     "2": "setModeMove",
     "3": "setModeMeasure",
@@ -67,6 +80,7 @@
     "6": "setModeWall",
     "r": "repeat",
     "d": "toggleDice",
+    "i": "toggleInventory",
     "g": "toggleGrid",
     "Escape": "escape"
   },
@@ -81,7 +95,8 @@
         { "value": "model", "label": "Model (Base)" },
         { "value": "box", "label": "Box" },
         { "value": "cylinder", "label": "Cylinder" },
-        { "value": "sphere", "label": "Sphere" }
+        { "value": "sphere", "label": "Sphere" },
+        { "value": "light", "label": "Light" }
       ]
     },
     {
@@ -122,7 +137,29 @@
         { "value": "cone-small", "label": "6\" Cone" },
         { "value": "cone-large", "label": "12\" Cone" },
         { "value": "aura-3", "label": "3\" Aura" },
-        { "value": "aura-6", "label": "6\" Aura" }
+        { "value": "aura-6", "label": "6\" Aura" },
+        { "value": "rectangle-card", "label": "Card" },
+        { "value": "rectangle-token", "label": "Token" }
+      ]
+    },
+    {
+      "id": "light-color",
+      "type": "color",
+      "label": "Light Color",
+      "action": "setLightColor",
+      "default": "#ffffcc"
+    },
+    {
+      "id": "time-of-day",
+      "type": "select",
+      "label": "Time of Day",
+      "action": "setTimeOfDay",
+      "default": "day",
+      "options": [
+        { "value": "day", "label": "Day" },
+        { "value": "dawn", "label": "Dawn" },
+        { "value": "dusk", "label": "Dusk" },
+        { "value": "night", "label": "Night" }
       ]
     },
     {
@@ -131,6 +168,14 @@
       "label": "Table Color",
       "action": "setGridColor",
       "default": "#2d4428"
+    },
+    {
+      "id": "grid-texture",
+      "type": "file",
+      "label": "Table Texture",
+      "action": "setGridTexture",
+      "clearAction": "clearGridTexture",
+      "accept": "image/*"
     }
   ],
   "settings": {
@@ -138,6 +183,10 @@
     "boxColor": "#3366cc"
   },
   "modes": {
+    "select": {
+      "label": "Select",
+      "highlightColor": "#ffffff"
+    },
     "place": {
       "label": "Place",
       "highlightColor": "#00ff88"

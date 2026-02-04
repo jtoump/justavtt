@@ -10,13 +10,19 @@ import { Templates } from './interaction/Templates.js';
 import { ObjectManager } from './objects/ObjectManager.js';
 import { UIManager } from './ui/UIManager.js';
 import { DiceRoller } from './ui/DiceRoller.js';
+import { ItemPanel } from './ui/ItemPanel.js';
 import { MapState } from './state/MapState.js';
 import { SessionManager } from './multiplayer/SessionManager.js';
+import { DataManager } from './data/DataManager.js';
+import { InventoryManager } from './data/InventoryManager.js';
+import { InventoryPanel } from './ui/InventoryPanel.js';
+import { CreaturePanel } from './ui/CreaturePanel.js';
+import { DiceNotationParser } from './utils/DiceNotationParser.js';
 
 class App {
   constructor() {
     this.canvas = document.getElementById('canvas');
-    this.currentMode = 'place';
+    this.currentMode = 'select';
     this.currentSnapTarget = null;
     this.wallStart = null;
     this.moveStartPos = null;
@@ -69,6 +75,44 @@ class App {
     // Initialize dice roller
     this.diceRoller = new DiceRoller(document.getElementById('app'));
     this.diceRoller.hide(); // Hidden by default
+
+    // Initialize data manager and item panel
+    this.dataManager = new DataManager();
+    await this.dataManager.loadData('/src/data');
+    this.itemPanel = new ItemPanel(document.getElementById('app'), this.dataManager);
+
+    // Setup callback for when template link changes (for multiplayer sync)
+    this.itemPanel.setOnLinkChange((template, linkData) => {
+      console.log('[App] Template link changed:', linkData);
+      this.notifyStateChange();
+    });
+
+    // Initialize inventory system
+    this.inventoryManager = new InventoryManager();
+    this.inventoryPanel = new InventoryPanel(
+      document.getElementById('app'),
+      this.inventoryManager
+    );
+
+    // Wire up ItemPanel to inventory
+    this.itemPanel.setOnAddToStash((item, source) => {
+      this.inventoryManager.addItem(item, source);
+      console.log('[App] Item added to stash:', item.name);
+    });
+
+    // Initialize creature panel with dice notation parser
+    this.diceNotationParser = new DiceNotationParser(this.diceRoller);
+    this.creaturePanel = new CreaturePanel(
+      document.getElementById('app'),
+      this.dataManager,
+      this.diceNotationParser
+    );
+
+    // Setup callback for when creature link changes (for multiplayer sync)
+    this.creaturePanel.setOnLinkChange((object, linkData) => {
+      console.log('[App] Object creature link changed:', linkData);
+      this.notifyStateChange();
+    });
 
     this.raycaster = new Raycaster(
       this.sceneManager.camera,
@@ -151,6 +195,32 @@ class App {
     this.raycaster.setOnMove((event) => this.handleMove(event));
     this.raycaster.setOnPlace((event) => this.handlePlace(event));
     this.raycaster.setOnHover((event) => this.handleHover(event));
+    this.raycaster.setOnTemplateClick((event) => this.handleTemplateClick(event));
+  }
+
+  handleTemplateClick(event) {
+    if (!event.template) return;
+
+    if (this.currentMode === 'delete') {
+      // Delete the template
+      this.templates.removeTemplate(event.template);
+      this.updateRaycasterTemplates();
+      this.notifyStateChange();
+      // Hide item panel if it was showing this template
+      if (this.itemPanel && this.itemPanel.currentTemplate === event.template) {
+        this.itemPanel.hide();
+      }
+    } else {
+      // Show item panel for the clicked template
+      if (this.itemPanel) {
+        this.itemPanel.showForTemplate(event.template);
+      }
+    }
+  }
+
+  updateRaycasterTemplates() {
+    const clickableTemplates = this.templates.getClickableTemplates();
+    this.raycaster.setTemplateObjects(clickableTemplates);
   }
 
   setupKeyboardEvents() {
@@ -210,9 +280,22 @@ class App {
     } else if (this.currentMode === 'template') {
       // Template mode - click to place template
       if (this.templates.activeTemplate) {
+        const placedTemplate = this.templates.activeTemplate;
         this.templates.placeTemplate();
+        // Link clickable templates to a default deck for demo purposes
+        if (placedTemplate.userData.clickable) {
+          // Default link to common treasure deck - can be customized later
+          this.templates.linkTemplateToData(placedTemplate, { type: 'deck', id: 'treasure-common' });
+        }
+        this.updateRaycasterTemplates();
+        this.notifyStateChange();
       } else {
         this.templates.showTemplate(this.currentTemplateType, event.point);
+      }
+    } else if (this.currentMode === 'select') {
+      // Select mode - click on objects to view/edit creature stats
+      if (event.type === 'object') {
+        this.creaturePanel.showForObject(event.object);
       }
     } else if (this.currentMode === 'wall') {
       // Wall mode - click to start/place wall line
@@ -277,6 +360,11 @@ class App {
         const worldPos = this.grid.gridToWorld(obj.userData.gridX, obj.userData.gridZ);
         this.snapHighlight.setColor(0xff4444);
         this.snapHighlight.show(worldPos.x, obj.userData.stackLevel, worldPos.z);
+      } else if (event.templateHit && event.templateHit.template) {
+        // Show delete highlight for templates
+        const template = event.templateHit.template;
+        this.snapHighlight.setColor(0xff4444);
+        this.snapHighlight.show(template.position.x, 0.1, template.position.z);
       } else {
         this.snapHighlight.hide();
       }
@@ -462,7 +550,7 @@ class App {
       return;
     }
 
-    this.setMode('place');
+    this.setMode('select');
   }
 
   updateRaycasterObjects() {
@@ -481,6 +569,7 @@ class App {
 
   registerUIActions() {
     // Mode actions
+    this.uiManager.registerAction('setModeSelect', () => this.setMode('select'));
     this.uiManager.registerAction('setModePlace', () => this.setMode('place'));
     this.uiManager.registerAction('setModeMove', () => this.setMode('move'));
     this.uiManager.registerAction('setModeMeasure', () => this.setMode('measure'));
@@ -496,6 +585,7 @@ class App {
       this.templates.clearAllTemplates();
       this.clearModeState();
       this.updateRaycasterObjects();
+      this.updateRaycasterTemplates();
       this.notifyStateChange();
     });
 
@@ -508,10 +598,26 @@ class App {
       this.diceRoller.toggle();
     });
 
+    // Inventory panel toggle
+    this.uiManager.registerAction('toggleInventory', () => {
+      this.inventoryPanel.toggle();
+    });
+
     // Color and shape settings
     this.uiManager.registerAction('setGridColor', (color) => {
       const hex = parseInt(color.replace('#', ''), 16);
       this.grid.setGroundColor(hex);
+    });
+
+    // Grid texture control
+    this.uiManager.registerAction('setGridTexture', (dataUrl, file) => {
+      console.log(`[App] Setting grid texture: ${file.name}`);
+      this.grid.setGroundTexture(dataUrl);
+    });
+
+    this.uiManager.registerAction('clearGridTexture', () => {
+      console.log('[App] Clearing grid texture');
+      this.grid.clearGroundTexture();
     });
 
     this.uiManager.registerAction('setObjectColor', (color) => {
@@ -532,6 +638,18 @@ class App {
       }
     });
 
+    // Light color control - applies to new light objects
+    this.uiManager.registerAction('setLightColor', (color) => {
+      const hex = parseInt(color.replace('#', ''), 16);
+      // Set light color for new light objects
+      this.objectManager.setLightColor(hex);
+    });
+
+    // Time of day / scene lighting control
+    this.uiManager.registerAction('setTimeOfDay', (preset) => {
+      this.sceneManager.setTimeOfDay(preset);
+    });
+
     // Shape selection
     this.uiManager.registerAction('setObjectShape', (shape) => {
       this.objectManager.setShape(shape);
@@ -549,7 +667,7 @@ class App {
    * @returns {Object} The serialized map state
    */
   getState() {
-    return this.mapState.serialize(this.objectManager);
+    return this.mapState.serialize(this.objectManager, this.templates);
   }
 
   /**
@@ -557,7 +675,7 @@ class App {
    * @returns {string} JSON string of the map state
    */
   getStateJSON() {
-    return this.mapState.toJSON(this.objectManager);
+    return JSON.stringify(this.mapState.serialize(this.objectManager, this.templates));
   }
 
   /**
@@ -566,8 +684,9 @@ class App {
    */
   setState(state) {
     this.clearModeState();
-    this.mapState.deserialize(state, this.objectManager);
+    this.mapState.deserialize(state, this.objectManager, this.templates);
     this.updateRaycasterObjects();
+    this.updateRaycasterTemplates();
   }
 
   /**
@@ -576,8 +695,14 @@ class App {
    */
   setStateJSON(json) {
     this.clearModeState();
-    this.mapState.fromJSON(json, this.objectManager);
+    try {
+      const state = JSON.parse(json);
+      this.mapState.deserialize(state, this.objectManager, this.templates);
+    } catch (e) {
+      console.error('Failed to parse map state JSON:', e);
+    }
     this.updateRaycasterObjects();
+    this.updateRaycasterTemplates();
   }
 
   /**

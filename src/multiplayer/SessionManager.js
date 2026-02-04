@@ -248,6 +248,8 @@ export class SessionManager {
    * @param {string} fromUser - User who sent the update
    */
   handleRemoteStateUpdate(state, fromUser) {
+    console.log('[Session] Applying remote state from:', fromUser, 'objects:', state?.objects?.length || 0);
+
     // Temporarily disable state change notifications to avoid echo
     const originalCallback = this.app.stateChangeCallback;
     this.app.stateChangeCallback = null;
@@ -257,6 +259,8 @@ export class SessionManager {
 
     // Re-enable state change notifications
     this.app.stateChangeCallback = originalCallback;
+
+    console.log('[Session] Remote state applied successfully');
   }
 
   /**

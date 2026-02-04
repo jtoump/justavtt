@@ -1,0 +1,68 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "description": "Item definitions for VTT templates"
+  },
+  "items": [
+    {
+      "id": "healing-potion",
+      "name": "Potion of Healing",
+      "type": "consumable",
+      "rarity": "common",
+      "description": "A vial of red liquid that shimmers when agitated. Heals 2d4+2 hit points when consumed.",
+      "properties": {
+        "uses": 1,
+        "effect": "Heal 2d4+2 HP"
+      },
+      "tags": ["potion", "healing"]
+    },
+    {
+      "id": "torch",
+      "name": "Torch",
+      "type": "gear",
+      "rarity": "common",
+      "description": "A wooden rod wrapped in cloth soaked in pitch. Provides bright light in a 20-foot radius.",
+      "properties": {
+        "duration": "1 hour",
+        "light": "20 ft bright, 20 ft dim"
+      },
+      "tags": ["light", "consumable"]
+    },
+    {
+      "id": "rope-50ft",
+      "name": "Rope (50 ft)",
+      "type": "gear",
+      "rarity": "common",
+      "description": "Hempen rope, 50 feet in length. Has 2 hit points and can be burst with a DC 17 Strength check.",
+      "properties": {
+        "length": "50 ft",
+        "hp": 2
+      },
+      "tags": ["utility"]
+    },
+    {
+      "id": "longsword-1",
+      "name": "Longsword +1",
+      "type": "weapon",
+      "rarity": "uncommon",
+      "description": "A finely crafted longsword that grants a +1 bonus to attack and damage rolls.",
+      "properties": {
+        "damage": "1d8+1 slashing",
+        "versatile": "1d10+1"
+      },
+      "tags": ["weapon", "martial", "magic"]
+    },
+    {
+      "id": "ring-protection",
+      "name": "Ring of Protection",
+      "type": "wondrous",
+      "rarity": "rare",
+      "description": "A golden ring set with a small sapphire. While wearing this ring, you gain a +1 bonus to AC and saving throws.",
+      "properties": {
+        "attunement": true,
+        "bonus": "+1 AC and saves"
+      },
+      "tags": ["ring", "magic", "protection"]
+    }
+  ]
+}

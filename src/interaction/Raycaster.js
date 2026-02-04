@@ -9,16 +9,23 @@ export class Raycaster {
 
     this.gridPlane = null;
     this.objects = [];
+    this.templateObjects = [];
 
     this.onClickCallback = null;
     this.onSelectCallback = null;
     this.onMoveCallback = null;
     this.onPlaceCallback = null;
     this.onHoverCallback = null;
+    this.onTemplateClickCallback = null;
 
     this.isCarrying = false;
     this.carriedObject = null;
     this.selectEnabled = false;
+
+    // Drag detection - only trigger click if mouse hasn't moved much
+    this.mouseDownPos = null;
+    this.isDragging = false;
+    this.dragThreshold = 5; // pixels
 
     this.setupEventListeners();
   }
@@ -31,7 +38,8 @@ export class Raycaster {
   }
 
   setupEventListeners() {
-    this.domElement.addEventListener('click', (e) => this.handleClick(e));
+    this.domElement.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+    this.domElement.addEventListener('mouseup', (e) => this.handleMouseUp(e));
     this.domElement.addEventListener('mousemove', (e) => this.handleMouseMove(e));
   }
 
@@ -61,6 +69,14 @@ export class Raycaster {
 
   setOnHover(callback) {
     this.onHoverCallback = callback;
+  }
+
+  setTemplateObjects(templates) {
+    this.templateObjects = templates || [];
+  }
+
+  setOnTemplateClick(callback) {
+    this.onTemplateClickCallback = callback;
   }
 
   updateMouse(event) {
@@ -117,9 +133,63 @@ export class Raycaster {
     return this.raycaster.intersectObject(this.gridPlane, false);
   }
 
-  handleClick(event) {
+  raycastTemplates() {
+    if (!this.templateObjects || this.templateObjects.length === 0) return [];
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    // Traverse children to hit meshes inside template groups
+    return this.raycaster.intersectObjects(this.templateObjects, true);
+  }
+
+  /**
+   * Find the parent template for a hit object
+   */
+  findParentTemplate(hitObject) {
+    // Check if the hit object itself is a template
+    if (this.templateObjects.includes(hitObject)) {
+      return hitObject;
+    }
+    // Traverse up to find a parent that's a template
+    let current = hitObject.parent;
+    while (current) {
+      if (this.templateObjects.includes(current)) {
+        return current;
+      }
+      current = current.parent;
+    }
+    return null;
+  }
+
+  handleMouseDown(event) {
     if (event.button !== 0) return;
 
+    // Record starting position to detect drag vs click
+    this.mouseDownPos = { x: event.clientX, y: event.clientY };
+    this.isDragging = false;
+  }
+
+  handleMouseUp(event) {
+    if (event.button !== 0) return;
+
+    // Check if this was a drag (camera pan/rotate) or a click
+    if (this.mouseDownPos) {
+      const dx = event.clientX - this.mouseDownPos.x;
+      const dy = event.clientY - this.mouseDownPos.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > this.dragThreshold) {
+        // This was a drag, not a click - cancel any pending action
+        this.mouseDownPos = null;
+        return;
+      }
+    }
+
+    this.mouseDownPos = null;
+
+    // Process as a click
+    this.handleClick(event);
+  }
+
+  handleClick(event) {
     this.updateMouse(event);
 
     if (this.isCarrying && this.carriedObject) {
@@ -145,6 +215,19 @@ export class Raycaster {
       this.isCarrying = false;
       this.carriedObject = null;
       return;
+    }
+
+    // Check for clickable template hits first
+    const templateHits = this.raycastTemplates();
+    if (templateHits.length > 0) {
+      const template = this.findParentTemplate(templateHits[0].object);
+      if (template && template.userData.clickable && this.onTemplateClickCallback) {
+        this.onTemplateClickCallback({
+          template: template,
+          point: templateHits[0].point
+        });
+        return;
+      }
     }
 
     const objectHits = this.raycastObjects();
@@ -188,8 +271,22 @@ export class Raycaster {
   handleMouseMove(event) {
     this.updateMouse(event);
 
+    // Check if we're dragging (for camera pan/rotate)
+    if (this.mouseDownPos) {
+      const dx = event.clientX - this.mouseDownPos.x;
+      const dy = event.clientY - this.mouseDownPos.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > this.dragThreshold) {
+        this.isDragging = true;
+        // Don't process hover/move callbacks while dragging camera
+        return;
+      }
+    }
+
     const gridHits = this.raycastGrid();
     const objectHits = this.raycastObjects();
+    const templateHits = this.raycastTemplates();
 
     // Map hits to their parent objects for hover callback
     const mappedHoverHit = objectHits.length > 0 ? {
@@ -197,10 +294,17 @@ export class Raycaster {
       object: this.findParentObject(objectHits[0].object)
     } : null;
 
+    // Map template hits to their parent template
+    const mappedTemplateHit = templateHits.length > 0 ? {
+      ...templateHits[0],
+      template: this.findParentTemplate(templateHits[0].object)
+    } : null;
+
     if (this.onHoverCallback) {
       this.onHoverCallback({
         gridHit: gridHits.length > 0 ? gridHits[0] : null,
-        objectHit: mappedHoverHit
+        objectHit: mappedHoverHit,
+        templateHit: mappedTemplateHit
       });
     }
 
