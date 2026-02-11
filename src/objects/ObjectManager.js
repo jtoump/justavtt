@@ -140,7 +140,7 @@ export class ObjectManager {
       mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(
         worldPos.x,
-        currentHeight + this.boxSize / 2,
+        (worldPos.y || 0) + currentHeight + this.boxSize / 2,
         worldPos.z
       );
       mesh.castShadow = true;
@@ -150,6 +150,7 @@ export class ObjectManager {
     mesh.userData.gridX = gridX;
     mesh.userData.gridZ = gridZ;
     mesh.userData.stackLevel = currentHeight;
+    mesh.userData.terrainHeight = worldPos.y || 0;
     mesh.userData.shape = this.currentShape;
     mesh.userData.baseSize = this.currentBaseSize;
     mesh.userData.wounds = 0;
@@ -179,7 +180,7 @@ export class ObjectManager {
       }
     });
 
-    group.position.set(worldPos.x, currentHeight, worldPos.z);
+    group.position.set(worldPos.x, (worldPos.y || 0) + currentHeight, worldPos.z);
     group.userData.modelHeight = height;
     group.userData.baseRadius = radius;
     group.userData.isModel = true;
@@ -230,7 +231,7 @@ export class ObjectManager {
     ring.position.y = 0.01;
     group.add(ring);
 
-    group.position.set(worldPos.x, currentHeight, worldPos.z);
+    group.position.set(worldPos.x, (worldPos.y || 0) + currentHeight, worldPos.z);
     group.userData.modelHeight = sphereRadius * 2 + 0.1;
     group.userData.isLight = true;
     group.userData.lightRef = light;
@@ -440,7 +441,7 @@ export class ObjectManager {
       mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(
         worldPos.x,
-        currentHeight + this.boxSize / 2,
+        (worldPos.y || 0) + currentHeight + this.boxSize / 2,
         worldPos.z
       );
       mesh.castShadow = true;
@@ -450,6 +451,7 @@ export class ObjectManager {
     mesh.userData.gridX = gridX;
     mesh.userData.gridZ = gridZ;
     mesh.userData.stackLevel = currentHeight;
+    mesh.userData.terrainHeight = worldPos.y || 0;
     mesh.userData.shape = shape;
     mesh.userData.baseSize = baseSize;
 
@@ -510,7 +512,7 @@ export class ObjectManager {
         gridX,
         gridZ,
         worldX: worldPos.x,
-        worldY: stackHeight,
+        worldY: (worldPos.y || 0) + stackHeight,
         worldZ: worldPos.z,
         targetObject: targetObj
       };
@@ -527,7 +529,7 @@ export class ObjectManager {
           gridX: gridPos.x,
           gridZ: gridPos.z,
           worldX: worldPos.x,
-          worldY: stackHeight,
+          worldY: (worldPos.y || 0) + stackHeight,
           worldZ: worldPos.z
         };
       }
@@ -551,19 +553,19 @@ export class ObjectManager {
 
     const newHeight = this.getStackHeight(gridX, gridZ);
     const worldPos = this.grid.gridToWorld(gridX, gridZ);
+    const terrainY = worldPos.y || 0;
 
     // Position based on object type
     if (object.userData.isModel) {
-      // Models sit directly on the surface
-      object.position.set(worldPos.x, newHeight, worldPos.z);
+      object.position.set(worldPos.x, terrainY + newHeight, worldPos.z);
     } else {
-      // Regular shapes are centered vertically
-      object.position.set(worldPos.x, newHeight + this.boxSize / 2, worldPos.z);
+      object.position.set(worldPos.x, terrainY + newHeight + this.boxSize / 2, worldPos.z);
     }
 
     object.userData.gridX = gridX;
     object.userData.gridZ = gridZ;
     object.userData.stackLevel = newHeight;
+    object.userData.terrainHeight = terrainY;
 
     this.setStackHeight(gridX, gridZ, newHeight + objectHeight);
   }

@@ -11,9 +11,10 @@ export class MapState {
    * Serialize the current map state to a plain object
    * @param {ObjectManager} objectManager - The object manager containing map objects
    * @param {Templates} templates - Optional templates manager
+   * @param {Grid} grid - Optional grid for terrain/texture state
    * @returns {Object} Serialized map state
    */
-  serialize(objectManager, templates = null) {
+  serialize(objectManager, templates = null, grid = null) {
     const objects = objectManager.getObjects().map(obj => {
       // Get color from object - handle both Mesh and Group (model) objects
       let color = '#3366cc'; // default color
@@ -44,11 +45,15 @@ export class MapState {
     // Serialize templates if provided
     const serializedTemplates = templates ? this.serializeTemplates(templates) : [];
 
+    // Serialize grid state if provided
+    const gridState = grid ? grid.getGridState() : null;
+
     return {
       version: this.version,
       timestamp: Date.now(),
       objects,
-      templates: serializedTemplates
+      templates: serializedTemplates,
+      gridState
     };
   }
 
@@ -84,11 +89,17 @@ export class MapState {
    * @param {Object} state - The state object to deserialize
    * @param {ObjectManager} objectManager - The object manager to apply state to
    * @param {Templates} templates - Optional templates manager
+   * @param {Grid} grid - Optional grid for terrain/texture state
    */
-  deserialize(state, objectManager, templates = null) {
+  deserialize(state, objectManager, templates = null, grid = null) {
     if (!state || !state.objects) {
       console.warn('Invalid state object');
       return;
+    }
+
+    // Apply grid state FIRST so cellHeights are available for object placement
+    if (grid && state.gridState) {
+      grid.applyGridState(state.gridState);
     }
 
     // Clear existing objects

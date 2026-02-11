@@ -311,7 +311,7 @@ class App {
             const worldPos = this.grid.gridToWorld(gridPos.x, gridPos.z);
             const stackHeight = this.objectManager.getStackHeight(gridPos.x, gridPos.z);
             this.snapHighlight.setColor(0x00aaff);
-            this.snapHighlight.show(worldPos.x, stackHeight, worldPos.z);
+            this.snapHighlight.show(worldPos.x, (worldPos.y || 0) + stackHeight, worldPos.z);
           } else {
             // Second click - place wall
             const positions = this.wallPreview.getLinePositions(this.wallStart, gridPos);
@@ -339,7 +339,7 @@ class App {
         const worldPos = this.grid.gridToWorld(obj.userData.gridX, obj.userData.gridZ);
         const stackHeight = this.objectManager.getStackHeight(obj.userData.gridX, obj.userData.gridZ);
         this.snapHighlight.setColor(0xffaa00); // Orange for stack
-        this.snapHighlight.show(worldPos.x, stackHeight, worldPos.z);
+        this.snapHighlight.show(worldPos.x, (worldPos.y || 0) + stackHeight, worldPos.z);
       } else if (event.gridHit) {
         // Hovering over the grid - show highlight for placement
         const gridPos = this.grid.worldToGrid(event.gridHit.point.x, event.gridHit.point.z);
@@ -347,7 +347,7 @@ class App {
           const worldPos = this.grid.gridToWorld(gridPos.x, gridPos.z);
           const stackHeight = this.objectManager.getStackHeight(gridPos.x, gridPos.z);
           this.snapHighlight.setColor(0x00ff88); // Green for grid
-          this.snapHighlight.show(worldPos.x, stackHeight, worldPos.z);
+          this.snapHighlight.show(worldPos.x, (worldPos.y || 0) + stackHeight, worldPos.z);
         } else {
           this.snapHighlight.hide();
         }
@@ -359,7 +359,7 @@ class App {
         const obj = event.objectHit.object;
         const worldPos = this.grid.gridToWorld(obj.userData.gridX, obj.userData.gridZ);
         this.snapHighlight.setColor(0xff4444);
-        this.snapHighlight.show(worldPos.x, obj.userData.stackLevel, worldPos.z);
+        this.snapHighlight.show(worldPos.x, (worldPos.y || 0) + obj.userData.stackLevel, worldPos.z);
       } else if (event.templateHit && event.templateHit.template) {
         // Show delete highlight for templates
         const template = event.templateHit.template;
@@ -406,7 +406,7 @@ class App {
           const worldPos = this.grid.gridToWorld(gridPos.x, gridPos.z);
           const stackHeight = this.objectManager.getStackHeight(gridPos.x, gridPos.z);
           this.snapHighlight.setColor(0x00aaff);
-          this.snapHighlight.show(worldPos.x, stackHeight, worldPos.z);
+          this.snapHighlight.show(worldPos.x, (worldPos.y || 0) + stackHeight, worldPos.z);
         }
       }
     }
@@ -422,7 +422,7 @@ class App {
 
     this.moveStartPos = {
       grid: { x: gridX, z: gridZ },
-      world: { x: worldPos.x, y: stackHeight, z: worldPos.z }
+      world: { x: worldPos.x, y: (worldPos.y || 0) + stackHeight, z: worldPos.z }
     };
   }
 
@@ -607,17 +607,33 @@ class App {
     this.uiManager.registerAction('setGridColor', (color) => {
       const hex = parseInt(color.replace('#', ''), 16);
       this.grid.setGroundColor(hex);
+      this.notifyStateChange();
     });
 
     // Grid texture control
     this.uiManager.registerAction('setGridTexture', (dataUrl, file) => {
       console.log(`[App] Setting grid texture: ${file.name}`);
       this.grid.setGroundTexture(dataUrl);
+      this.notifyStateChange();
     });
 
     this.uiManager.registerAction('clearGridTexture', () => {
       console.log('[App] Clearing grid texture');
       this.grid.clearGroundTexture();
+      this.notifyStateChange();
+    });
+
+    // Heightmap control
+    this.uiManager.registerAction('setHeightMap', (dataUrl, file) => {
+      console.log(`[App] Setting heightmap: ${file.name}`);
+      this.grid.setHeightMap(dataUrl);
+      this.notifyStateChange();
+    });
+
+    this.uiManager.registerAction('clearHeightMap', () => {
+      console.log('[App] Clearing heightmap');
+      this.grid.clearHeightMap();
+      this.notifyStateChange();
     });
 
     this.uiManager.registerAction('setObjectColor', (color) => {
@@ -667,7 +683,7 @@ class App {
    * @returns {Object} The serialized map state
    */
   getState() {
-    return this.mapState.serialize(this.objectManager, this.templates);
+    return this.mapState.serialize(this.objectManager, this.templates, this.grid);
   }
 
   /**
@@ -675,7 +691,7 @@ class App {
    * @returns {string} JSON string of the map state
    */
   getStateJSON() {
-    return JSON.stringify(this.mapState.serialize(this.objectManager, this.templates));
+    return JSON.stringify(this.mapState.serialize(this.objectManager, this.templates, this.grid));
   }
 
   /**
@@ -684,7 +700,7 @@ class App {
    */
   setState(state) {
     this.clearModeState();
-    this.mapState.deserialize(state, this.objectManager, this.templates);
+    this.mapState.deserialize(state, this.objectManager, this.templates, this.grid);
     this.updateRaycasterObjects();
     this.updateRaycasterTemplates();
   }
@@ -697,7 +713,7 @@ class App {
     this.clearModeState();
     try {
       const state = JSON.parse(json);
-      this.mapState.deserialize(state, this.objectManager, this.templates);
+      this.mapState.deserialize(state, this.objectManager, this.templates, this.grid);
     } catch (e) {
       console.error('Failed to parse map state JSON:', e);
     }

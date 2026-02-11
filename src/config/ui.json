@@ -176,6 +176,14 @@
       "action": "setGridTexture",
       "clearAction": "clearGridTexture",
       "accept": "image/*"
+    },
+    {
+      "id": "grid-heightmap",
+      "type": "file",
+      "label": "Height Map",
+      "action": "setHeightMap",
+      "clearAction": "clearHeightMap",
+      "accept": "image/*"
     }
   ],
   "settings": {

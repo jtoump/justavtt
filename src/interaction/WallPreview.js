@@ -51,7 +51,7 @@ export class WallPreview {
       const stackHeight = getStackHeight(gridPos.x, gridPos.z);
 
       const mesh = new THREE.Mesh(this.geometry, this.material);
-      mesh.position.set(worldPos.x, stackHeight + 0.05, worldPos.z);
+      mesh.position.set(worldPos.x, (worldPos.y || 0) + stackHeight + 0.05, worldPos.z);
       this.scene.add(mesh);
       this.highlights.push(mesh);
     }
